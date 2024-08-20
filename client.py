@@ -13,6 +13,7 @@ import torch.optim as optim
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader 
 from torch import tensor
+import argparse
 
 def load_data(file_path, label_column):
     data = pd.read_csv(file_path,index_col=0)
@@ -75,8 +76,8 @@ class Client(fl.client.Client):
             metrics={"accuracy": float(accuracy)},
         )
 
-def main(client_data_path, label_column):
-    X, y = load_data(client_data_path, label_column)
+def main(options):
+    X, y = load_data(options.client_data_path, options.label_column)
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
 
     num_train = len(X_train)
@@ -121,9 +122,12 @@ def main(client_data_path, label_column):
         local_dp_mod=local_dp_obj
     )
 
-    fl.client.start_client(server_address="localhost:5040", client=client)
+    fl.client.start_client(server_address=options.address, client=client)
 
 if __name__ == "__main__":
-    client_data_path = sys.argv[1]  
-    label_column = sys.argv[2]  
-    main(client_data_path, label_column)
+    arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument("--client_data_path", type=str, required=True)
+    arg_parser.add_argument("--label_column", type=str, required=True)
+    arg_parser.add_argument("--address", type=str, default="localhost:5040")
+    options = arg_parser.parse_args()
+    main(options)

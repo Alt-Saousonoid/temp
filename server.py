@@ -14,7 +14,7 @@ from typing import Callable, Dict, List, Optional, Tuple, Union
 import warnings
 from flwr.server.client_proxy import ClientProxy
 from flwr.server.client_manager import ClientManager
-
+import argparse
 
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -162,8 +162,8 @@ def config_func(rnd: int) -> Dict[str, str]:
     }
     return config
 
-def main(test_data_path, num_rounds):
-    X, y = load_test_data(test_data_path)
+def main(options):
+    X, y = load_test_data(options.test_data_path)
     strategy = CustomFedAvg(
         fraction_fit=1,
         min_available_clients=2,
@@ -171,13 +171,13 @@ def main(test_data_path, num_rounds):
         min_fit_clients=2,
         on_fit_config_fn=config_func,
         on_evaluate_config_fn=config_func,
-        num_rounds=num_rounds
+        num_rounds=options.num_rounds
     )
-    strategy.test_data_path = test_data_path
+    strategy.test_data_path = options.test_data_path
     try:
-        rounds = num_rounds
+        rounds = options.num_rounds
         fl.server.start_server(
-            server_address="localhost:5040",
+            server_address=options.address,
             config=fl.server.ServerConfig(num_rounds=rounds),
             strategy=strategy
         )
@@ -187,6 +187,9 @@ def main(test_data_path, num_rounds):
         save_model(strategy.model, 'multitask.pth')
 
 if __name__ == "__main__":
-    test_data_path = sys.argv[1]
-    num_rounds = int(sys.argv[2])
-    main(test_data_path, num_rounds)
+    arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument("--test_data_path", type=str, required=True)
+    arg_parser.add_argument("--num_rounds", type=int, required=True)
+    arg_parser.add_argument("--address", type=str, default="localhost:5040")
+    options = arg_parser.parse_args()
+    main(options)
